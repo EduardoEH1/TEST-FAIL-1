@@ -401,7 +401,7 @@ def camera_panel(mode: str, recipe_id: int, vial: int, progress: float,
             st.error("Could not start automatic tracking: {}".format(exc))
             return
         processor = ctx.video_processor
-        if mode == "automatic":
+        if mode == "automatic" and recipe_queue.strip():
             left, right = st.columns(2)
             if left.button("Skip missed vial", key=key + "-skip"):
                 processor.adjust_recipe_queue("skip")
@@ -458,6 +458,9 @@ def camera_panel(mode: str, recipe_id: int, vial: int, progress: float,
                 st.caption("Active vial {} · Recipe {} · {} · next queued recipe: {}".format(
                     latest.get("vial"), latest.get("recipe_id"), latest.get("tracker_state", "manual context"),
                     next_recipe if next_recipe is not None else "queue empty"))
+            elif latest.get("vial") is not None and latest.get("tracker_state"):
+                st.caption("Tracking vial {} · Recipe unknown · {} · anomaly scoring disabled".format(
+                    latest.get("vial"), latest.get("tracker_state")))
             if events:
                 st.caption("Tracker events: " + " · ".join(events[-3:]))
 
@@ -896,6 +899,10 @@ if page == "Main":
         if tracking_mode == "Automatic vial tracking":
             default_queue = "5x3,6x3,7x3,8x3,9x3,10x3,11x3,12x3,13x3,14x3"
             recipe_queue = st.sidebar.text_input("Recipe queue, in vial order", default_queue)
+            if recipe_queue.strip():
+                st.sidebar.caption("Queue order must match the production run. Clear the field to track without recipes or scores.")
+            else:
+                st.sidebar.caption("No recipe queue: vials and RGB/HSV are still tracked; anomaly scores and recipe-based progress are disabled.")
             previous_recipe = st.sidebar.number_input("Previous recipe (optional; use 0 if unknown)",
                                                        min_value=0, max_value=999, value=0)
             live_threshold = active_review_threshold()
@@ -904,8 +911,12 @@ if page == "Main":
             camera_panel("automatic", chosen_recipe, chosen_vial, progress, live_threshold,
                          "prediction-camera", recipe_queue,
                          int(previous_recipe) if previous_recipe else None, calibration_json)
-            st.info("Automatic progress is estimated from detected liquid rise and expected recipe fill time. "
-                    "The recipe queue must match production order; incorrect queue alignment gives incorrect scores.")
+            if recipe_queue.strip():
+                st.info("Automatic progress is estimated from detected liquid rise and expected recipe fill time. "
+                        "The recipe queue must match production order; incorrect queue alignment gives incorrect scores.")
+            else:
+                st.info("Without a recipe queue, automatic tracking records vial arrival, observed fill start, and color. "
+                        "It does not assign recipe-based progress percentages or anomaly scores.")
         else:
             camera_panel("prediction", chosen_recipe, chosen_vial, progress, threshold,
                          "prediction-camera", calibration_json=calibration_json)

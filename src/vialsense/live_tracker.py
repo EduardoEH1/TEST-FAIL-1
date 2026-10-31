@@ -65,7 +65,7 @@ class VialRecord:
     recipe_id: int | None            # from the operator queue; None when the queue ran out
     previous_recipe: int | None      # recipe of the vial before, for the carryover check
     arrived_s: float
-    expected_fill_s: float
+    expected_fill_s: float | None
     readings: list[dict[str, Any]] = field(default_factory=list)
     fill_start_s: float | None = None
     fill_start_unobserved: bool = False
@@ -86,7 +86,7 @@ class VialRecord:
                 and self.recipe_id != self.previous_recipe)
 
     def live_progress(self, t: float) -> float | None:
-        if self.fill_start_s is None:
+        if self.fill_start_s is None or self.expected_fill_s is None:
             return None
         return float(np.clip((t - self.fill_start_s) / self.expected_fill_s, 0.0, 1.0))
 
@@ -97,7 +97,9 @@ class VialRecord:
             "fill_start_detected_s": None if self.fill_start_s is None else round(self.fill_start_s, 2),
             "fill_start_unobserved": self.fill_start_unobserved,
             "left_s": None if self.left_s is None else round(self.left_s, 2),
-            "est_fill_start_s": None if self.left_s is None else round(self.left_s - END_LAG_S - self.expected_fill_s, 2),
+            "est_fill_start_s": (None if self.left_s is None or self.expected_fill_s is None
+                                 or self.fill_start_s is None or self.fill_start_unobserved
+                                 else round(self.left_s - END_LAG_S - self.expected_fill_s, 2)),
             "est_fill_end_s": None if self.left_s is None else round(self.left_s - END_LAG_S, 2),
             "scored_frames": self.scored_frames,
             "flagged_share": None if self.flagged_share is None else round(self.flagged_share, 3),
@@ -115,7 +117,7 @@ class VialTracker:
     """
 
     def __init__(self, queue: list[int], score_fn: Callable[[dict, int, float], dict],
-                 fill_seconds: dict[int, float], default_fill_s: float = 35.0,
+                 fill_seconds: dict[int, float], default_fill_s: float | None = 35.0,
                  previous_recipe: int | None = None):
         self.queue = list(queue)
         self.position = 0
@@ -169,8 +171,14 @@ class VialTracker:
         self._update_fill_start(vial, t, detection)
         progress = vial.live_progress(t)
         reading["live_progress"] = progress
-        state = ("FILL START NOT OBSERVED" if vial.fill_start_unobserved else
-                 "WAITING FOR FILL" if progress is None else "FILLING")
+        if vial.fill_start_unobserved:
+            state = "Fill start not observed"
+        elif vial.fill_start_s is None:
+            state = "WAITING FOR FILL"
+        elif vial.expected_fill_s is None:
+            state = "Filling; recipe unknown, progress unavailable"
+        else:
+            state = "FILLING"
         score = None
         if progress is not None and vial.recipe_id is not None:
             score = self.score_fn(detection, vial.recipe_id, progress)
@@ -194,7 +202,8 @@ class VialTracker:
             self.position += 1
         number = len(self.finished) + 1
         expected = self.fill_seconds.get(recipe, self.default_fill_s) if recipe is not None else self.default_fill_s
-        self.current = VialRecord(number, recipe, self.last_recipe, t, float(expected))
+        expected = None if expected is None else float(expected)
+        self.current = VialRecord(number, recipe, self.last_recipe, t, expected)
         if recipe is None:
             self.events.append(f"Vial {number} arrived: recipe queue is empty, color only")
         elif self.current.recipe_change:
@@ -248,6 +257,9 @@ class VialTracker:
                            + (f". {vial.explanation}" if vial.explanation else ""))
 
     def final_progress(self, vial: VialRecord, t: float) -> float | None:
+        if (vial.fill_start_s is None or vial.fill_start_unobserved
+                or vial.expected_fill_s is None or vial.left_s is None):
+            return None
         end = vial.left_s - END_LAG_S  # type: ignore[operator]
         start = end - vial.expected_fill_s
         if t < start or t > end:
@@ -257,6 +269,10 @@ class VialTracker:
     def _decide(self, vial: VialRecord) -> None:
         if vial.recipe_id is None:
             vial.verdict, vial.explanation = "NO RECIPE", "Recipe queue was empty; color recorded only"
+            return
+        if vial.fill_start_unobserved or vial.fill_start_s is None:
+            vial.verdict = "NO DATA"
+            vial.explanation = "Fill start not observed; color recorded without anomaly scoring"
             return
         own, prev = [], []
         for r in vial.readings:

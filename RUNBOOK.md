@@ -82,6 +82,13 @@ is known. Use **Skip missed vial** or **Undo queue step** if vial counting loses
 alignment. **Manual fallback** lets an operator provide recipe and fill
 progress when automatic tracking is not reliable.
 
+If the recipe order is unknown, clear the queue field. The detector and vial
+tracker continue to display RGB/HSV readings, but the dashboard will not assign
+recipes, estimate recipe-based fill percentages, or produce anomaly scores. If
+the vial arrives with liquid already visible, it reports **Fill start not
+observed**; that vial is not scored, including in its final summary. This keeps
+the system from treating an assumed early-fill stage as measured progress.
+
 The liquid finder expects the Dataset 2 camera geometry. For a different camera
 view, create a calibration JSON with `vialsense.live_cli calibrate`, inspect
 the generated preview, and upload the JSON in the dashboard. Calibrate from a

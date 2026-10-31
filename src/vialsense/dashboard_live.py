@@ -11,7 +11,18 @@ from .live_tracker import VialTracker, parse_queue
 
 def build_dashboard_tracker(recipe_queue: str, model_path: Path,
                             fill_table_path: Path, previous_recipe: int | None = None) -> VialTracker:
-    """Create the live tracker with the same Phase 2 scorer used by the app."""
+    """Build live tracking with optional recipe context.
+
+    With no recipe queue, vial and fill-start tracking remain active, but no
+    recipe duration or anomaly model is needed and no scores can be produced.
+    """
+    queue = parse_queue(recipe_queue) if recipe_queue.strip() else []
+    if not queue:
+        def score_fn(reading, recipe_id, fill_progress):
+            raise RuntimeError("Phase 2 scoring is disabled when recipe is unknown")
+
+        return VialTracker([], score_fn, {}, default_fill_s=None)
+
     model = load_model(model_path)
     windows = pd.read_csv(fill_table_path)
     required = {"recipe_id", "duration_s"}
@@ -28,6 +39,6 @@ def build_dashboard_tracker(recipe_queue: str, model_path: Path,
         )
 
     return VialTracker(
-        parse_queue(recipe_queue), score_fn, fill_seconds,
+        queue, score_fn, fill_seconds,
         previous_recipe=previous_recipe,
     )

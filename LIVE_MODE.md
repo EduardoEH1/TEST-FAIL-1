@@ -155,13 +155,14 @@ color is close to Recipe 9.
 `calibrate` command, it gives the same verdicts as the original.
 
 The integrated branch was also replayed locally at 5 analysed frames per
-second. It assigned all 30 vials in queue order. Estimated window starts were
-within 0.86 s mean absolute error (4.06 s maximum) of the corrected labels;
-estimated ends were within 0.72 s mean absolute error (3.03 s maximum). This
-separate run returned 20 PASS and 10 FLAG. These replay figures describe this
-dataset and provisional model; they do not validate contamination detection.
-Video 5 begins with liquid visible in Vial 1, so the updated tracker withholds
-live progress for that vial instead of inventing an observed fill start.
+second. It assigned all 30 vials in queue order. For the 29 vials with an
+observed fill start, estimated starts differed from corrected labels by 0.84 s
+mean absolute error (4.06 s maximum); estimated ends differed by 0.72 s (3.03
+s maximum). This version returned 20 PASS, 9 FLAG, and 1 NO DATA. Video 5
+begins with liquid visible in Vial 1, so the tracker withholds progress and
+scoring for that vial rather than inventing an observed fill start. These
+replay figures describe this dataset and provisional model; they do not
+validate contamination detection.
 
 ## Limits
 

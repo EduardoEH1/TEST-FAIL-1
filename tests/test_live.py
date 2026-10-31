@@ -110,10 +110,28 @@ def test_fill_already_visible_at_arrival_withholds_live_progress():
     view = tracker.update(0.0, detection(height=25, confidence="high"))
     for t in (0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0):
         view = tracker.update(t, detection(height=80, confidence="high"))
-    assert view["state"] == "FILL START NOT OBSERVED"
+    assert view["state"] == "Fill start not observed"
     assert view["progress"] is None
     assert view["anomaly_score"] is None
     assert any("live progress withheld" in event for event in tracker.events)
+
+
+def test_unobserved_fill_start_never_gets_final_inferred_scores():
+    tracker = VialTracker([5], fake_score, {5: 20})
+    for t in (0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0):
+        view = tracker.update(t, detection(height=40, color=(41, 79, 46),
+                                           confidence="high"))
+    assert view["state"] == "Fill start not observed"
+    assert view["progress"] is None and view["anomaly_score"] is None
+    for t in (4.5, 5.0, 5.5):
+        tracker.update(t, detection(vial=False))
+    tracker.finish()
+    vial = tracker.finished[0]
+    assert vial.verdict == "NO DATA"
+    assert vial.scored_frames == 0
+    assert tracker.final_progress(vial, 2.0) is None
+    assert vial.summary()["est_fill_start_s"] is None
+    assert "Fill start not observed" in vial.explanation
 
 
 def test_short_flicker_is_ignored_and_queue_kept():
@@ -165,3 +183,30 @@ def test_dashboard_adapter_passes_tracker_context_to_phase2():
     assert view["state"] == "FILLING"
     assert view["progress"] is not None and view["progress"] > 0
     assert view["status"] is not None
+
+
+
+def test_dashboard_adapter_tracks_without_recipe_and_never_scores():
+    tracker = build_dashboard_tracker(
+        "   ", Path("/missing/model.json"), Path("/missing/fill-windows.csv"),
+    )
+    assert tracker.next_recipe is None
+    view = tracker.update(0.0, detection(height=0))
+    for t in (0.5, 1.0, 1.5, 2.0, 2.5):
+        view = tracker.update(t, detection(height=0))
+    for t in (3.0, 3.2, 3.4, 4.0):
+        view = tracker.update(t, detection(height=35, color=(41, 79, 46)))
+
+    assert view["vial"] == 1
+    assert view["recipe_id"] is None
+    assert view["state"] == "Filling; recipe unknown, progress unavailable"
+    assert view["progress"] is None
+    assert view["anomaly_score"] is None
+    assert view["status"] is None
+    assert tracker.current is not None
+    reading = tracker.current.readings[-1]
+    assert all(k in reading for k in ("r_mean", "g_mean", "b_mean", "h_mean_opencv",
+                                       "s_mean_opencv", "v_mean_opencv"))
+    tracker.finish()
+    assert tracker.finished[0].verdict == "NO RECIPE"
+    assert tracker.finished[0].scored_frames == 0

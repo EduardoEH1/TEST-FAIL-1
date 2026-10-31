@@ -21,7 +21,9 @@ VialSense connects four parts of the workflow:
    reliable enough to score.
 3. **Live Mode:** Tracks vial arrival and liquid rise, estimates fill
    progress, and assigns the next recipe from an operator-provided queue. The
-   recipe is not inferred from color.
+   recipe is not inferred from color. If the recipe sequence is unknown, it
+   can still track vials and show RGB/HSV readings without recipe assignment
+   or anomaly scores.
 4. **Operator Dashboard:** Displays the live camera, measured color, fill progress,
    and anomaly status. Operators can use automatic tracking or provide recipe
    and progress manually when needed.
@@ -47,10 +49,18 @@ fill frames. The saved liquid-finder readings include 879 high-confidence
 color measurements.
 
 In a subsequent Video 5 replay, the integrated tracker assigned all 30 vials
-in the supplied recipe order. Estimated fill-window starts were within a mean
-absolute error of 0.86 seconds of the corrected labels, and estimated ends
-were within 0.72 seconds on average. The replay produced 20 `PASS` and 10
-`FLAG` results. Our 36 automated tests pass. These results demonstrate the
+in the supplied recipe order. For the 29 vials with an observed fill start,
+estimated fill-window starts differed from the corrected labels by a mean
+absolute 0.84 seconds; estimated ends differed by 0.72 seconds on average.
+The latest replay produced 20 `PASS`, 9 `FLAG`, and 1 `NO DATA`: the first vial
+arrived with liquid already visible, so it was not scored. All 38 automated
+tests pass. We also replayed the supplied CSI recording through the detector
+and tracker adapter. At about five sampled frames per second it produced
+1,848 vial detections and 1,780 liquid detections. Since that clip has no
+labels, these counts cannot establish
+detection accuracy or confirm the vial count. The replay did verify that an
+unknown recipe context produces color-only tracking with no anomaly scores.
+These results demonstrate the
 prototype's workflow on Dataset 2; they do not measure contamination-detection
 accuracy.
 
@@ -63,9 +73,9 @@ See the [combined Phase 1 recipe summary](results/corrected/phase1/recipe_summar
 Our recipe profiles are provisional and use selected Dataset 2 vials; the
 dataset has no confirmed contamination labels. Lighting, reflections, camera
 alignment, liquid visibility, or a missed vial can affect measurements or
-recipe/fill context. The CSI retest, camera calibration, and connections to
-machine-provided recipe and fill signals are useful next steps. Detailed
-measurement, tracker, and scoring caveats are documented in the
+recipe/fill context. A new physical CSI station test, camera calibration, and
+connections to machine-provided recipe and fill signals are useful next steps.
+Detailed measurement, tracker, and scoring caveats are documented in the
 [dashboard guide](DASHBOARD_SETUP.md), [Live Mode guide](LIVE_MODE.md), and
 [runbook](RUNBOOK.md).
 
