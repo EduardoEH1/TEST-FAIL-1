@@ -137,27 +137,43 @@ historical measurements; the current Phase 1 and Phase 2 workflow described
 above uses the saved automatic liquid-finder measurements under
 `inputs/color_check/` and `results/corrected/`.
 
-## Method and limitations
+## Testing, Results, and Limitations
 
-- Phase 1 retains only colors with a detected vial, detected liquid, and high
-  finder confidence. The confidence signal is algorithmic and does not verify
-  every pixel in the selected region as liquid.
-- Lighting, reflections, glass, liquid depth, camera settings, or vial motion
-  may affect RGB/HSV values. The measurement setup is not color-calibrated.
-- Each recipe reference comes from its final vial, chosen as a candidate for a
-  well-flushed sample. Dataset 2 does not confirm that this vial is normal.
-- Some recipe-stage references have too few usable measurements. The detector
-  returns `insufficient_reference` for unsupported stages.
-- The review boundary is a prototype setting based on observed reference-vial
-  variation. Dataset 2 has no verified contamination labels, so it cannot
-  establish detector accuracy or validated alert thresholds.
-- Live recipe identity comes from an operator-entered queue. The tracker
-  estimates fill progress from liquid rise and expected fill duration; queue
-  errors or a missed fill start can make that context wrong. See the
-  [dashboard validation notes](DASHBOARD_SETUP.md).
-- The Dataset 2 replay validates the reference camera view only. The CSI camera
-  view and browser camera connection still require testing on the actual setup.
+VialSense explores how computer vision and real-time color analysis could help
+operators notice color patterns that may be associated with recipe carryover
+during an industrial filling process.
 
-Use the results to explore color behavior and demonstrate the data flow. Do
-not use review flags alone to classify product or trigger an industrial
-decision.
+Our initial analysis used Dataset 2 to examine RGB and HSV measurements from
+30 vials across Recipes 5–14. We then connected the color analysis and
+provisional anomaly scoring to a live camera workflow and operator dashboard.
+
+During our October 30 visit to the UWM Connected Systems Institute (CSI), our
+team connected the station camera to the dashboard and observed live vial
+detection, color measurements, and anomaly scores. That test also exposed
+inconsistencies in liquid detection and fill-progress handling. We improved the
+integration between vial tracking, recipe sequencing, the dashboard, and
+anomaly scoring afterward. The updated version has not yet been retested on the
+physical CSI station.
+
+In a subsequent replay of Dataset 2 Video 5, the system tracked all 30 vials in
+the supplied recipe order and produced 20 `PASS` and 10 `FLAG` results. Fill
+window timing estimates were within a mean absolute error of 0.86 seconds for
+the start and 0.72 seconds for the end, compared with the corrected labels.
+The 36 automated tests pass. These results demonstrate the prototype's
+software workflow; they do not establish contamination-detection accuracy.
+
+Lighting, reflections, camera position, liquid visibility, and fill level can
+affect the measured RGB/HSV values. Recipe profiles use selected Dataset 2
+vials as provisional references, and the dataset does not contain confirmed
+contamination labels. Live recipe identity comes from an operator-entered
+queue, while fill progress is estimated from liquid rise and expected fill
+time. A missed vial, an incorrect queue, or an unobserved fill start can affect
+the context used for scoring. Some stages also lack enough reference data and
+will return no score.
+
+VialSense is intended to give operators additional information for quality
+inspection. It does not control the production line, and a `FLAG` is a prompt
+for review rather than a confirmed contamination or product-failure result.
+The updated software has been validated with the Dataset 2 Video 5 replay, but
+its camera alignment and browser-camera connection still need testing at CSI.
+See the [dashboard validation notes](DASHBOARD_SETUP.md) for details.
