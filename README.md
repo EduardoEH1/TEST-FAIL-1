@@ -1,179 +1,125 @@
-# VialSense: RGB/HSV Color Analysis and Anomaly Detection
+# VialSense
 
-VialSense is a Python prototype for comparing liquid color measurements with
-the expected color pattern for a programmed recipe. It is organized as two
-phases: **Phase 1 measures and summarizes color over filling progress**, and
-**Phase 2 compares a measurement with a recipe-specific provisional profile**.
+VialSense is our hackathon prototype for helping manufacturing operators
+notice unexpected liquid-color patterns during recipe changes. The goal is to
+support quality inspection by measuring vial color during filling and
+comparing it with the expected pattern for the active recipe. A review alert
+is a signal for an operator to investigate; it is not an automatic line
+control or a confirmed contamination diagnosis.
 
-This is a hackathon prototype. Its references and review flags are exploratory;
-they are not validated product limits or proof of contamination.
+## How VialSense Works
 
-## Phase 1: RGB/HSV Color Analysis
+VialSense connects four parts of the workflow:
 
-The current analysis uses saved measurements from Salah's automatic liquid
-finder. For Dataset 2 Video 5, it covers 30 vials across Recipes 5–14 and
-1,067 unique labeled fill frames. The finder supplied high-confidence liquid
-colors for 879 frames; other frames remain in the timelines without color
-values. Each usable measurement contains mean RGB and OpenCV HSV values,
-timestamp, recipe, vial, and progress through the labeled fill window.
+1. **Phase 1 — RGB/HSV Color Analysis:** Salah's liquid finder locates the vial
+   and liquid region and measures RGB and OpenCV HSV. Phase 1 organizes those
+   readings by recipe, vial, timestamp, and fill progress for comparison and
+   visualization.
+2. **Phase 2 — Anomaly Scoring:** Eduardo's scoring code compares a reading
+   with a provisional recipe profile for the corresponding filling stage. It
+   returns a score and status, or abstains when the reading or context is not
+   reliable enough to score.
+3. **Salah's Live Mode:** Tracks vial arrival and liquid rise, estimates fill
+   progress, and assigns the next recipe from an operator-provided queue. The
+   recipe is not inferred from color.
+4. **Yen's Dashboard:** Displays the live camera, measured color, fill progress,
+   and anomaly status. Operators can use automatic tracking or provide recipe
+   and progress manually when needed.
 
-The RGB/HSV values describe pixels selected by the liquid finder. They are not
-calibrated physical color readings. `fill_progress` is a time-based position
-from 0 to 1 within a labeled fill window, not measured liquid volume.
+The project also supports saved-data analysis and replaying Dataset 2 Video 5.
+For implementation details, see the [Phase 1 results and methodology](results/corrected/README.md),
+[Phase 2 methodology](results/corrected/phase2/README.md),
+[Live Mode guide](LIVE_MODE.md), and [dashboard setup](DASHBOARD_SETUP.md).
 
-- [Phase 1 results, recipe timelines, and plots](results/corrected/README.md)
-- [Combined recipe summary](results/corrected/phase1/recipe_summary.csv)
-- [Per-vial summary](results/corrected/phase1/vial_summary.csv)
-- [Consolidated temporal comparison](results/temporal_analysis/consolidated/README.md)
-- [Earlier manual-ROI recipe measurements](#additional-exploratory-results)
+## Testing at CSI
 
-## Phase 2: Anomaly Detection
+On October 30, our team visited the UWM Connected Systems Institute (CSI) and
+connected the fluid mixing station's camera to the dashboard. We observed live
+vial detection, color measurements, and anomaly scores. The session gave us a
+working end-to-end demonstration and helped us identify improvements to liquid
+detection and fill-progress handling. We updated the integration afterward;
+the updated version has not yet been retested on the physical CSI station.
 
-Phase 2 compares RGB/HSV input with the recipe's early, middle, or late filling
-pattern. It returns an `anomaly_score` and status, or abstains when the color,
-confidence, recipe-stage reference, or process context is unavailable. It does
-not locate a vial or liquid in a camera frame; that measurement is supplied by
-the upstream detector.
+## Results
 
-The current profiles use one candidate reference vial per recipe. These
-references are **provisional and not confirmed normal**. A `review_unusual`
-result requests review; it does not diagnose contamination. Evaluation held
-out the other two vials per recipe: 577 high-confidence measurements received
-scores and 255 were marked for review. There are no confirmed good/bad labels,
-so these counts do not measure accuracy, false-alarm rate, or contamination.
+Our Dataset 2 analysis covers 30 vials across Recipes 5–14 and 1,067 labeled
+fill frames. The saved liquid-finder readings include 879 high-confidence
+color measurements.
 
-- [Phase 2 methodology, results, and integration instructions](results/corrected/phase2/README.md)
-- [Stage reference table](results/corrected/phase2/reference_stage_summary.csv)
-- [Frame-level scores](results/corrected/phase2/frame_predictions.csv)
-- [Per-vial evaluation summary](results/corrected/phase2/vial_evaluation_summary.csv)
+In a subsequent Video 5 replay, the integrated tracker assigned all 30 vials
+in the supplied recipe order. Estimated fill-window starts were within a mean
+absolute error of 0.86 seconds of the corrected labels, and estimated ends
+were within 0.72 seconds on average. The replay produced 20 `PASS` and 10
+`FLAG` results. Our 36 automated tests pass. These results demonstrate the
+prototype's workflow on Dataset 2; they do not measure contamination-detection
+accuracy.
 
-The scoring interface accepts a recipe ID, RGB, OpenCV HSV, fill progress, and
-optional timestamp. `score_salah_reading` also accepts the dictionary returned
-by Salah's liquid-finder `Detection.to_dict()` or a saved measurement row. The
-live dashboard can estimate vial arrival and fill progress from video, while
-the operator supplies the recipe queue in production order.
+See the [combined Phase 1 recipe summary](results/corrected/phase1/recipe_summary.csv),
+[Phase 2 frame scores](results/corrected/phase2/frame_predictions.csv), and
+[temporal comparison](results/temporal_analysis/consolidated/README.md).
 
-## Integrated detector run
+## Limitations and Future Improvements
 
-The [integration guide](results/integration/README.md) shows how to replay
-Dataset 2 Video 5 through Phase 1 and Phase 2, or run Salah's `find_liquid()`
-on a local copy of the Video 5 MP4. Saved replay is executable without raw
-video. For a new video without recipe/fill timing, the runner saves color
-readings and leaves anomaly scores blank until that context is provided.
+Our recipe profiles are provisional and use selected Dataset 2 vials; the
+dataset has no confirmed contamination labels. Lighting, reflections, camera
+alignment, liquid visibility, or a missed vial can affect measurements or
+recipe/fill context. The CSI retest, camera calibration, and connections to
+machine-provided recipe and fill signals are useful next steps. Detailed
+measurement, tracker, and scoring caveats are documented in the
+[dashboard guide](DASHBOARD_SETUP.md), [Live Mode guide](LIVE_MODE.md), and
+[runbook](RUNBOOK.md).
 
-The [Live Dashboard guide](DASHBOARD_SETUP.md) covers Yen's camera dashboard,
-Salah's automatic vial tracker, recipe-queue controls, dependency setup, and a
-full Video 5 replay. Start the dashboard before a vial arrives; a manual
-context mode remains available for fallback and debugging.
+## Installation and Usage
 
-For copy-paste setup and run commands, see the [VialSense Runbook](RUNBOOK.md)
-or its [PDF version](RUNBOOK.pdf).
-
-## Setup and run
-
-Use Python 3.10 or newer. From the repository root:
+Use Python 3.10 or newer from the project root:
 
 ```bash
 python -m venv .venv
 # macOS/Linux: source .venv/bin/activate
 # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-```
-
-To run the Streamlit camera dashboard, also install its web dependencies:
-
-```bash
 python -m pip install -r requirements-dashboard.txt
 ```
 
-Rebuild the current Phase 1 summaries and Phase 2 model from checked-in CSV
-snapshots, then run the integration and analysis checks:
+Run the tests and rebuild Phase 1/Phase 2 outputs to a separate review folder:
 
 ```bash
-PYTHONPATH=src python -m vialsense.corrected_cli build
-PYTHONPATH=src python -m pytest -q tests
+PYTHONPATH=src python -m pytest -q
+PYTHONPATH=src python -m vialsense.corrected_cli build --output-dir /tmp/vialsense-review
 ```
 
-The build writes under `results/corrected/`. It needs no raw images or video;
-the saved inputs are in [`inputs/color_check/`](inputs/color_check/README.md).
-Repeat pixel extraction from source images/video only when the corresponding
-raw media and liquid-finder code are available.
-
-To score a single liquid-finder JSON reading, supply the model, current recipe,
-and filling progress:
+Start Yen's dashboard:
 
 ```bash
-PYTHONPATH=src python -m vialsense.corrected_cli score \
-  --recipe-id 9 --progress 0.40 < reading.json
+python -m streamlit run app.py
 ```
 
-The input JSON must include `r_mean`, `g_mean`, `b_mean`, `h_mean_opencv`,
-`s_mean_opencv`, `v_mean_opencv`, `found_vial`, `found_liquid`, and
-`confidence`. See the [Phase 2 guide](results/corrected/phase2/README.md) for
-the Python interface and returned fields.
+To replay the original Video 5 through automatic tracking, provide a local
+copy of the video and the recipe queue used in that run:
 
-## Repository guide
-
-```text
-src/vialsense/                 Reusable color, timeline, and anomaly functions
-app.py                          Streamlit dashboard for saved data and camera use
-requirements-dashboard.txt     Additional dashboard/WebRTC dependencies
-LIVE_MODE.md                    Salah's command-line live/replay workflow
-DASHBOARD_SETUP.md              Dashboard setup and automatic-tracker validation
-inputs/color_check/            Saved label and liquid-finder CSV inputs
-results/corrected/phase1/      Current RGB/HSV timelines, summaries, plots
-results/corrected/phase2/      Current provisional model and scores
-results/integration/           Detector-to-score runs and instructions
-results/temporal_analysis/      Earlier temporal comparisons and reports
-results/recipe_5 ... recipe_14/ Earlier manual-ROI samples and annotations
-tests/                          Checks for Phase 2 and saved integration data
+```bash
+PYTHONPATH=src python -m vialsense.live_cli run \
+  --video /path/to/vial_fill_video_5.mp4 \
+  --recipes "5x3,6x3,7x3,8x3,9x3,10x3,11x3,12x3,13x3,14x3" \
+  --fps 5 --no-window --output-dir /tmp/vialsense-live-review
 ```
 
-### Additional exploratory results
+The repository does not include raw videos or dataset archives. Saved
+measurements and labels are under [`inputs/color_check/`](inputs/color_check/README.md).
+The [runbook](RUNBOOK.md) contains PowerShell commands and additional workflow
+instructions.
 
-The repository also retains selected manual-ROI RGB/HSV samples and temporal
-analyses for Recipes 5–14. Those files provide exploratory examples and
-historical measurements; the current Phase 1 and Phase 2 workflow described
-above uses the saved automatic liquid-finder measurements under
-`inputs/color_check/` and `results/corrected/`.
+## Repository Guide
 
-## Testing, Results, and Limitations
-
-VialSense explores how computer vision and real-time color analysis could help
-operators notice color patterns that may be associated with recipe carryover
-during an industrial filling process.
-
-Our initial analysis used Dataset 2 to examine RGB and HSV measurements from
-30 vials across Recipes 5–14. We then connected the color analysis and
-provisional anomaly scoring to a live camera workflow and operator dashboard.
-
-During our October 30 visit to the UWM Connected Systems Institute (CSI), our
-team connected the station camera to the dashboard and observed live vial
-detection, color measurements, and anomaly scores. That test also exposed
-inconsistencies in liquid detection and fill-progress handling. We improved the
-integration between vial tracking, recipe sequencing, the dashboard, and
-anomaly scoring afterward. The updated version has not yet been retested on the
-physical CSI station.
-
-In a subsequent replay of Dataset 2 Video 5, the system tracked all 30 vials in
-the supplied recipe order and produced 20 `PASS` and 10 `FLAG` results. Fill
-window timing estimates were within a mean absolute error of 0.86 seconds for
-the start and 0.72 seconds for the end, compared with the corrected labels.
-The 36 automated tests pass. These results demonstrate the prototype's
-software workflow; they do not establish contamination-detection accuracy.
-
-Lighting, reflections, camera position, liquid visibility, and fill level can
-affect the measured RGB/HSV values. Recipe profiles use selected Dataset 2
-vials as provisional references, and the dataset does not contain confirmed
-contamination labels. Live recipe identity comes from an operator-entered
-queue, while fill progress is estimated from liquid rise and expected fill
-time. A missed vial, an incorrect queue, or an unobserved fill start can affect
-the context used for scoring. Some stages also lack enough reference data and
-will return no score.
-
-VialSense is intended to give operators additional information for quality
-inspection. It does not control the production line, and a `FLAG` is a prompt
-for review rather than a confirmed contamination or product-failure result.
-The updated software has been validated with the Dataset 2 Video 5 replay, but
-its camera alignment and browser-camera connection still need testing at CSI.
-See the [dashboard validation notes](DASHBOARD_SETUP.md) for details.
+| Path | Contents |
+|---|---|
+| `src/vialsense/` | Reusable Phase 1, Phase 2, detector integration, and Live Mode code |
+| `app.py` | Yen's Streamlit dashboard |
+| `inputs/color_check/` | Saved Video 5 measurements and recipe/fill labels |
+| `results/corrected/phase1/` | Current RGB/HSV timelines, summaries, and plots |
+| `results/corrected/phase2/` | Provisional recipe profiles and anomaly scores |
+| `results/integration/` | Saved detector-to-scoring examples and documentation |
+| `results/temporal_analysis/` | Temporal recipe analysis and comparison |
+| `results/recipe_5`–`results/recipe_14` | Earlier exploratory manual-ROI samples |
+| `tests/` | Phase 2, integration, and live-tracker tests |
+| `RUNBOOK.md` / `RUNBOOK.pdf` | Setup, replay, dashboard, and troubleshooting steps |
