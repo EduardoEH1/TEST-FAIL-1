@@ -1,0 +1,5 @@
+# Install after requirements.txt to run the Streamlit/WebRTC dashboard.
+streamlit>=1.40,<2
+streamlit-webrtc>=0.47,<1
+av>=12,<16
+plotly>=5.24,<7
