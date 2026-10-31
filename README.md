@@ -11,18 +11,18 @@ control or a confirmed contamination diagnosis.
 
 VialSense connects four parts of the workflow:
 
-1. **Phase 1 — RGB/HSV Color Analysis:** Salah's liquid finder locates the vial
+1. **Phase 1 — RGB/HSV Color Analysis:** The liquid finder locates the vial
    and liquid region and measures RGB and OpenCV HSV. Phase 1 organizes those
    readings by recipe, vial, timestamp, and fill progress for comparison and
    visualization.
-2. **Phase 2 — Anomaly Scoring:** Eduardo's scoring code compares a reading
+2. **Phase 2 — Anomaly Scoring:** The scoring module compares a reading
    with a provisional recipe profile for the corresponding filling stage. It
    returns a score and status, or abstains when the reading or context is not
    reliable enough to score.
-3. **Salah's Live Mode:** Tracks vial arrival and liquid rise, estimates fill
+3. **Live Mode:** Tracks vial arrival and liquid rise, estimates fill
    progress, and assigns the next recipe from an operator-provided queue. The
    recipe is not inferred from color.
-4. **Yen's Dashboard:** Displays the live camera, measured color, fill progress,
+4. **Operator Dashboard:** Displays the live camera, measured color, fill progress,
    and anomaly status. Operators can use automatic tracking or provide recipe
    and progress manually when needed.
 
@@ -88,7 +88,7 @@ PYTHONPATH=src python -m pytest -q
 PYTHONPATH=src python -m vialsense.corrected_cli build --output-dir /tmp/vialsense-review
 ```
 
-Start Yen's dashboard:
+Start the dashboard:
 
 ```bash
 python -m streamlit run app.py
@@ -114,7 +114,7 @@ instructions.
 | Path | Contents |
 |---|---|
 | `src/vialsense/` | Reusable Phase 1, Phase 2, detector integration, and Live Mode code |
-| `app.py` | Yen's Streamlit dashboard |
+| `app.py` | Streamlit operator dashboard |
 | `inputs/color_check/` | Saved Video 5 measurements and recipe/fill labels |
 | `results/corrected/phase1/` | Current RGB/HSV timelines, summaries, and plots |
 | `results/corrected/phase2/` | Provisional recipe profiles and anomaly scores |

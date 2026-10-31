@@ -1,7 +1,7 @@
 # Detector → Phase 1 → Phase 2 integration
 
-This branch combines Salah's `find_liquid(frame)` with the existing
-`score_salah_reading()` adapter. The saved Dataset 2 Video 5 workflow is
+This branch combines the liquid detector's `find_liquid(frame)` with the existing
+Phase 2 scoring adapter. The saved Dataset 2 Video 5 workflow is
 executable from the checked-in CSVs. The same runner can measure frames from
 an MP4 when the original video is available.
 `liquid_finder.py` and `find_color.py` are copied unchanged from `color-check`
@@ -18,7 +18,7 @@ PYTHONPATH=src python -m vialsense.integration_cli saved
 The command reads `inputs/color_check/frame_colors.csv`,
 `inputs/color_check/video5_vial_recipes.csv`, and the existing provisional
 model. It uses `prepare_video_timeline()` for Phase 1 and
-`evaluate_corrected()` / `score_salah_reading()` for Phase 2. It writes
+`evaluate_corrected()` and the Phase 2 adapter. It writes
 [Video 5 outputs](video5_saved/) in this folder. The run reproduces 1,067
 unique fill frames, 879 high-confidence liquid colors, 577 scored evaluation
 frames, and 255 provisional review flags. These counts match the current
@@ -35,8 +35,8 @@ PYTHONPATH=src python -m vialsense.integration_cli video \
   --output-dir results/integration/video5_from_mp4
 ```
 
-The runner samples each labeled fill window once per second, calls Salah's
-`find_liquid(frame)` on each frame, and passes its RGB/HSV and quality fields
+The runner samples each labeled fill window once per second, calls
+`find_liquid(frame)` on each frame, and passes the detector's RGB/HSV and quality fields
 through the same Phase 1 and Phase 2 path. The video itself is not checked in,
 so this command needs a local copy. The video command was exercised with a
 small generated clip; the original MP4 still needs a full rerun and visual

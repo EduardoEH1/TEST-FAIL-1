@@ -16,7 +16,7 @@ The scoring interface accepts:
   (`H` 0–179; `S` and `V` 0–255).
 - `fill_progress`: progress from 0 to 1 through the labeled filling window.
 - Optional timestamp, plus upstream `found_vial`, `found_liquid`, and
-  `confidence` fields when using `score_salah_reading`.
+  `confidence` fields when using the Phase 2 scoring adapter.
 
 Outputs include `anomaly_score`, `status`, `stage`, `reason`, reference sample
 count, `reference_vial_id`, and `reference_status`. A high-confidence liquid
@@ -75,25 +75,19 @@ PYTHONPATH=src python -m vialsense.corrected_cli score \
 
 `reading.json` must contain the six color fields and detection status fields.
 The machine or digital twin supplies the active recipe and fill progress. In
-Python, the adapter accepts the dictionary from Salah's
-`Detection.to_dict()`:
+Python, the adapter accepts the dictionary returned by the liquid detector's
+`Detection.to_dict()` method:
 
 ```python
 from vialsense.anomaly import load_model
-from vialsense.corrected_pipeline import score_salah_reading
-
 model = load_model("results/corrected/phase2/provisional_model.json")
-result = score_salah_reading(
-    model,
-    detection.to_dict(),
-    recipe_id=current_recipe,
-    fill_progress=current_fill_progress,
-)
+# Pass the model, detection.to_dict(), recipe ID, and fill progress
+# to the Phase 2 scoring adapter. See src/vialsense/corrected_pipeline.py.
 ```
 
 The tests replay saved high-confidence liquid-finder measurements through the
 adapter and CLI, including abstention behavior. A live camera demo also needs
-Salah's running detector and a live source for recipe and fill progress; the
+the running detector and a live source for recipe and fill progress; the
 checked-in data does not include a camera feed.
 
 ## Files

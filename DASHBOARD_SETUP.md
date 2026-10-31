@@ -1,6 +1,6 @@
 # Live dashboard and Video 5 replay
 
-The Streamlit dashboard connects the camera liquid finder, Salah's live vial
+The Streamlit dashboard connects the camera liquid finder, the live vial
 tracker, and the existing Phase 2 scorer. Automatic tracking detects vial
 arrival and visible fill progress. The operator supplies the recipe queue in
 production order because recipe identity is not inferred from color. A manual

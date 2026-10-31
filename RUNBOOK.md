@@ -70,7 +70,7 @@ misalignment shifts recipe assignments.
 
 PowerShell uses `$env:PYTHONPATH = "src"` on its own line before the command.
 
-## 5. Launch the Yen dashboard
+## 5. Launch the operator dashboard
 
 ```bash
 python -m streamlit run app.py

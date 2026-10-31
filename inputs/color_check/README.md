@@ -9,7 +9,7 @@ included.
 | `video5_vial_recipes.csv` | Dataset 2 vial-to-recipe map and video-time fill windows. |
 | `video5_frame_labels_original.csv` | Original still-image labels, retained for audit and traceability. |
 | `video5_frame_labels_corrected.csv` | Still-image label alignment data from `color-check`, commit `f1c91958ffd6e91abf7f6e74014a78e9ed23f9fc`. |
-| `frame_colors.csv` | Saved RGB/HSV measurements and quality fields from Salah's liquid finder on Video 5. |
+| `frame_colors.csv` | Saved RGB/HSV measurements and quality fields from the liquid finder on Video 5. |
 
 The current color timelines and detector profiles use `frame_colors.csv`,
 video timestamps, and the vial fill windows. Values enter the analysis only
