@@ -210,3 +210,29 @@ def test_dashboard_adapter_tracks_without_recipe_and_never_scores():
     tracker.finish()
     assert tracker.finished[0].verdict == "NO RECIPE"
     assert tracker.finished[0].scored_frames == 0
+
+
+def test_dashboard_status_wording():
+    from vialsense.dashboard_live import readable_status
+
+    assert readable_status("review_unusual") == "Review needed"
+    assert readable_status("within_provisional_pattern") == "Within reference"
+    assert readable_status(None, "WAITING FOR FILL") == "Waiting for fill"
+    assert readable_status(None, "Fill start not observed") == "Fill start not observed"
+    assert readable_status(None) == "Not scored"
+
+
+def test_dashboard_verdict_table_newest_first():
+    from vialsense.dashboard_live import finished_vials_table
+
+    tracker = VialTracker([6, 7, 7], fake_score, {6: 20, 7: 20}, previous_recipe=6)
+    t = run_vial(tracker, 0, color=(200, 120, 20))
+    t = run_vial(tracker, t, color=(150, 120, 60))
+    run_vial(tracker, t, color=(20, 120, 200))
+    tracker.finish()
+
+    table = finished_vials_table([vial.summary() for vial in tracker.finished])
+    assert list(table.Vial) == [3, 2, 1]
+    assert table.loc[table.Vial == 2, "Verdict"].item() == "FLAG"
+    assert "carryover from Recipe 6" in table.loc[table.Vial == 2, "Explanation"].item()
+    assert finished_vials_table([]).empty

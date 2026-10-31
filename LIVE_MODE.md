@@ -6,9 +6,12 @@ Runs the full check on a live camera at the fill station:
 camera -> calibration -> liquid finder -> vial tracker + recipe queue -> Phase 2 score -> verdict + cause
 ```
 
-![Live mode screen](results/live/live_screen.jpg)
+![Archived live-mode preview](results/live/live_screen.jpg)
 
-## Why the recorded video worked and the live camera did not
+*This earlier screen capture is a visual reference only; it predates the
+current verdict panel and does not represent the latest replay results.*
+
+## Recorded video and live camera inputs
 
 On video 5, the label file tells the code which recipe each vial runs and when
 it fills. A live camera sends pictures only. Live mode supplies both itself:
@@ -97,7 +100,7 @@ python -m vialsense.live_cli run --camera 0 --recipes "7x3,8x3" --previous-recip
 |---|---|
 | PASS | Most clear readings fit the recipe's profile |
 | FLAG | More than half of the clear readings score unusual (100 or more) |
-| NO DATA | Fewer than 3 clear readings: pale liquid, short column, or no profile for that fill stage |
+| NO DATA | The fill start was not observed, or there were fewer than 3 clear readings for the fill stage |
 | NO RECIPE | The queue ran out; color recorded only |
 
 ### Cause explanations for a FLAG
@@ -129,40 +132,28 @@ python -m vialsense.live_cli run --video data/raw/dataset2/vial_fill/videos/vial
 `--realtime` plays at real speed. Without it, the full 28-minute video runs in
 about 45 seconds. `--start-s` starts partway in.
 
-## Test results: video 5 replayed as live, labels hidden
+## Video 5 replay results
 
-Saved in `results/live/video5_replay/`.
+Current outputs are saved in [`results/live/video5_replay/`](results/live/video5_replay/).
+The replay assigned all 30 vials in queue order and returned 20 `PASS`, 9
+`FLAG`, and 1 `NO DATA`. Vial 1 arrived with liquid already visible and has no
+previous recipe, so it was not assigned an assumed start or anomaly score.
 
-- **Vials tracked:** 30 of 30. The recipe queue stayed in step, and every vial
-  got its correct recipe.
-- **Fill timing:** the estimated fill window lands within 1.25 s (standard
-  deviation) of the labeled one, worst case 4 s.
+The corrected labels provide 29 observed-start vials for timing comparison:
+estimated starts differed by 0.84 s mean absolute error (4.06 s maximum), and
+estimated ends differed by 0.72 s (3.03 s maximum).
 
-| Vial | FLAG | PASS |
-|---|---:|---:|
-| First vial after a recipe change (carryover, per the organizers) | 9 | 1 |
-| Second vial (clean, per the organizers) | 1 | 9 |
-| Third vial (reference for the profiles, not an independent test) | 0 | 10 |
-
-On the 20 independent vials: **18 of 20 correct (90%)**, 9 of 10 carryover
-vials caught, 1 false alarm in 10 clean vials. Of the 8 flagged carryover
-vials with a known previous recipe, 7 read "Likely carryover from Recipe X"
-and 1 reads "Possible carryover". The missed vial, 13, follows Recipe 8, whose
-color is close to Recipe 9.
-
-**Calibration check:** the same footage, re-rendered as a different camera
-(1280x720, zoomed, shifted), finds 0 vials without calibration. After one
-`calibrate` command, it gives the same verdicts as the original.
-
-The integrated branch was also replayed locally at 5 analysed frames per
-second. It assigned all 30 vials in queue order. For the 29 vials with an
-observed fill start, estimated starts differed from corrected labels by 0.84 s
-mean absolute error (4.06 s maximum); estimated ends differed by 0.72 s (3.03
-s maximum). This version returned 20 PASS, 9 FLAG, and 1 NO DATA. Video 5
-begins with liquid visible in Vial 1, so the tracker withholds progress and
-scoring for that vial rather than inventing an observed fill start. These
-replay figures describe this dataset and provisional model; they do not
-validate contamination detection.
+The challenge description expects the first vial after a recipe change to show
+possible carryover, while the second and third are expected to be clean. On
+the 9 actual recipe transitions, 8 were flagged and 1 passed (the missed case
+is Vial 13, Recipe 9, whose color is close to Recipe 8). Among the 10
+second-position vials, 1 was flagged and 9 passed. The 10 third-position
+vials were used to build the provisional profiles and are not independent
+evaluation samples. Excluding those reference vials and the initial vial, 17
+of 19 scored cases matched the expected pattern: 8/9 transition cases flagged
+and 1/10 presumed-clean second vials flagged. These roles are based on the
+challenge description, not confirmed contamination labels, so this is a
+descriptive check rather than validated accuracy.
 
 ## Limits
 
@@ -175,8 +166,8 @@ validate contamination detection.
   in the camera settings if it allows.
 - **The live fill-start estimate is rough.** Pale or shallow liquids may be
   detected late. If liquid is already clearly visible on arrival, live scoring
-  is withheld because the start was not observed.
-  The verdict uses the vial's departure, which is reliable.
+  and final scoring are withheld because the start was not observed. Departure
+  timing is used only when the start was observed.
 - **No machine connection.** Reading the recipe and fill signals from the
   Batch Scheduler over OPC UA, read-only, is the production upgrade and would
   replace the typed queue.

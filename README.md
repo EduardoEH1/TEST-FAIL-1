@@ -48,21 +48,40 @@ Our Dataset 2 analysis covers 30 vials across Recipes 5–14 and 1,067 labeled
 fill frames. The saved liquid-finder readings include 879 high-confidence
 color measurements.
 
-In a subsequent Video 5 replay, the integrated tracker assigned all 30 vials
-in the supplied recipe order. For the 29 vials with an observed fill start,
-estimated fill-window starts differed from the corrected labels by a mean
-absolute 0.84 seconds; estimated ends differed by 0.72 seconds on average.
-The latest replay produced 20 `PASS`, 9 `FLAG`, and 1 `NO DATA`: the first vial
-arrived with liquid already visible, so it was not scored. All 38 automated
-tests pass. We also replayed the supplied CSI recording through the detector
-and tracker adapter. At about five sampled frames per second it produced
-1,848 vial detections and 1,780 liquid detections. Since that clip has no
-labels, these counts cannot establish
-detection accuracy or confirm the vial count. The replay did verify that an
-unknown recipe context produces color-only tracking with no anomaly scores.
-These results demonstrate the
-prototype's workflow on Dataset 2; they do not measure contamination-detection
-accuracy.
+In a Video 5 replay, the integrated tracker assigned all 30 vials in the
+supplied recipe order. For the 29 vials whose fill start was observed, the
+estimated fill-window start differed from the corrected labels by 0.84 seconds
+on average (4.06 seconds maximum); estimated ends differed by 0.72 seconds on
+average (3.03 seconds maximum). The latest replay produced 20 `PASS`, 9
+`FLAG`, and 1 `NO DATA`. The initial vial arrived with liquid already visible
+and no prior recipe, so it was recorded but not scored.
+
+The Dataset 2 challenge describes the first vial after a recipe change as the
+carryover case, with the second and third expected to be clean. Applying that
+expected pattern to this replay gives:
+
+| Evaluation group | Expected | Result |
+|---|---|---|
+| First vial after a recipe change (9 vials) | Potential carryover | 8 `FLAG`, 1 `PASS` |
+| Second vial in each recipe (10 vials) | Clean | 1 `FLAG`, 9 `PASS` |
+| Third vial in each recipe (10 vials) | Reference vial used to build profiles | Not an independent evaluation |
+
+That is 17 of 19 independently evaluated vials matching the expected pattern
+(8/9 carryover cases flagged; 1/10 presumed-clean second vials flagged). The
+missed transition is Vial 13 (Recipe 9), whose color is close to Recipe 8. The
+initial Vial 1 is excluded from these counts: it has no preceding recipe and
+is now `NO DATA` because its fill start was not observed. These expected roles
+come from the challenge description, not confirmed contamination labels, so
+the counts describe prototype behavior rather than validated detection
+accuracy. The replay files are in [`results/live/video5_replay/`](results/live/video5_replay/).
+
+All 40 automated tests pass. We also replayed the supplied CSI recording
+through the detector and tracker adapter. At about five sampled frames per
+second, it produced 1,848 vial detections and 1,780 liquid detections. The
+recording has no labels, so these counts cannot establish detection accuracy
+or confirm the vial count. The replay verified color-only tracking without
+recipe context or anomaly scores. These results demonstrate the prototype's
+workflows; they do not validate contamination detection.
 
 See the [combined Phase 1 recipe summary](results/corrected/phase1/recipe_summary.csv),
 [Phase 2 frame scores](results/corrected/phase2/frame_predictions.csv), and

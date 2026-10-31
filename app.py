@@ -328,7 +328,19 @@ class CameraProcessor(VideoProcessorBase):
             elif direction == "back":
                 tracker.back()
 
+    def vial_report(self):
+        """Return completed vial summaries and the active vial summary."""
+        with self.lock:
+            tracker = self.tracker
+        if tracker is None:
+            return [], None
+        with self.tracker_lock:
+            finished = [vial.summary() for vial in tracker.finished]
+            current = tracker.current.summary() if tracker.current is not None else None
+        return finished, current
+
     def recv(self, frame):
+        from vialsense.dashboard_live import readable_status
         from vialsense.liquid_finder import draw, find_liquid
 
         image = frame.to_ndarray(format="bgr24")
@@ -352,7 +364,7 @@ class CameraProcessor(VideoProcessorBase):
                            fill_progress=progress,
                            stage=fill_stage(progress) if progress is not None else view.get("state"),
                            tracker_state=view.get("state"), anomaly_score=view.get("anomaly_score"),
-                           status=view.get("status"))
+                           status=readable_status(view.get("status"), view.get("state")))
         else:
             reading.update(timestamp=now, recipe_id=context["recipe_id"], vial=context["vial"],
                            fill_progress=progress, stage=fill_stage(progress))
@@ -380,6 +392,40 @@ class CameraProcessor(VideoProcessorBase):
                 self.last_sample = now
         annotated = draw(image, detection)
         return av.VideoFrame.from_ndarray(annotated, format="bgr24")
+
+
+def vial_verdict_panel(processor) -> None:
+    """Show the active carryover warning and the latest completed vial result."""
+    from vialsense.dashboard_live import VERDICT_STYLE, finished_vials_table
+
+    finished, current = processor.vial_report()
+    if current is not None and current.get("recipe_change"):
+        st.warning("Vial {}: recipe change {} → {}. Carryover risk on this vial.".format(
+            current["vial"], current["previous_recipe"], current["recipe_id"]))
+    if not finished:
+        st.caption("Vial verdicts appear here when each vial leaves the fill position.")
+        return
+
+    latest = finished[-1]
+    text_color, background = VERDICT_STYLE.get(
+        latest["verdict"], ("#24292f", "#f6f8fa"),
+    )
+    score = ("" if latest.get("median_score") is None else
+             " · median score {:.0f}".format(latest["median_score"]))
+    recipe = latest.get("recipe_id")
+    recipe_text = "unknown" if recipe is None else str(recipe)
+    st.markdown(
+        '<div style="border-left:6px solid {0};background:{1};padding:10px 14px;border-radius:6px;margin:8px 0">'
+        '<div style="color:{0};font-weight:700;font-size:1.15rem">Vial {2} · Recipe {3}: {4}{5}</div>'
+        '<div style="color:#24292f;margin-top:4px">{6}</div></div>'.format(
+            text_color, background, escape(str(latest["vial"])), escape(recipe_text),
+            escape(str(latest["verdict"])), escape(score),
+            escape(latest.get("explanation") or "Color fits the recipe profile.")),
+        unsafe_allow_html=True,
+    )
+    flagged = sum(vial["verdict"] == "FLAG" for vial in finished)
+    st.caption("{} vials completed · {} flagged".format(len(finished), flagged))
+    st.dataframe(finished_vials_table(finished), use_container_width=True, hide_index=True)
 
 
 def camera_panel(mode: str, recipe_id: int, vial: int, progress: float,
@@ -432,6 +478,8 @@ def camera_panel(mode: str, recipe_id: int, vial: int, progress: float,
                         rgb.get("r_mean", 0), rgb.get("g_mean", 0), rgb.get("b_mean", 0)
                     ) if latest.get("found_liquid") else "No liquid",
                 )
+            if mode == "automatic":
+                vial_verdict_panel(processor)
             if history:
                 stream = pd.DataFrame(history)
                 if "r_mean" not in stream:

@@ -42,3 +42,52 @@ def build_dashboard_tracker(recipe_queue: str, model_path: Path,
         queue, score_fn, fill_seconds,
         previous_recipe=previous_recipe,
     )
+
+
+STATUS_TEXT = {
+    "review_unusual": "Review needed",
+    "within_provisional_pattern": "Within reference",
+    "insufficient_reference": "No reference for this stage",
+    "unreliable_measurement": "Unreliable measurement",
+    "missing_measurement": "No color reading",
+    "unknown_recipe": "Recipe has no profile",
+    "invalid_input": "Waiting for recipe and fill context",
+}
+
+
+def readable_status(status: str | None, tracker_state: str | None = None) -> str:
+    """Return operator-friendly scoring text or the current tracker state."""
+    if status:
+        return STATUS_TEXT.get(status, status)
+    return (tracker_state or "Not scored").capitalize()
+
+
+VERDICT_STYLE = {
+    "FLAG": ("#b42318", "#fef3f2"),
+    "PASS": ("#1a7f37", "#effaf2"),
+    "NO DATA": ("#9a6700", "#fff8e5"),
+    "NO RECIPE": ("#9a6700", "#fff8e5"),
+}
+
+
+def finished_vials_table(summaries: list[dict]) -> pd.DataFrame:
+    """Return a newest-first table of completed vials and their verdicts."""
+    columns = ["Vial", "Recipe", "Previous recipe", "Verdict", "Median score",
+               "Flagged readings", "Explanation"]
+    if not summaries:
+        return pd.DataFrame(columns=columns)
+    rows = []
+    for summary in reversed(summaries):
+        flagged_share = summary.get("flagged_share")
+        rows.append({
+            "Vial": summary.get("vial"),
+            "Recipe": summary.get("recipe_id") if summary.get("recipe_id") is not None else "unknown",
+            "Previous recipe": (summary.get("previous_recipe")
+                                if summary.get("previous_recipe") is not None else "unknown"),
+            "Verdict": summary.get("verdict"),
+            "Median score": summary.get("median_score"),
+            "Flagged readings": (f"{flagged_share * 100:.0f}%"
+                                 if flagged_share is not None else ""),
+            "Explanation": summary.get("explanation") or "",
+        })
+    return pd.DataFrame(rows, columns=columns)

@@ -89,6 +89,11 @@ the vial arrives with liquid already visible, it reports **Fill start not
 observed**; that vial is not scored, including in its final summary. This keeps
 the system from treating an assumed early-fill stage as measured progress.
 
+The automatic camera view also shows recipe-change warnings, the latest
+completed vial's verdict and explanation, and a table of completed vials. Use
+the table to review `PASS`, `FLAG`, `NO DATA`, and `NO RECIPE` outcomes during
+the run; each `FLAG` is a request for review, not a confirmed contamination.
+
 The liquid finder expects the Dataset 2 camera geometry. For a different camera
 view, create a calibration JSON with `vialsense.live_cli calibrate`, inspect
 the generated preview, and upload the JSON in the dashboard. Calibrate from a

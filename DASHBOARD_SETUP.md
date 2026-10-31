@@ -30,6 +30,12 @@ double-counted vial.
 Automatic mode uses the review boundary saved in the active model; changing the
 sidebar's manual display threshold does not alter the automatic tracker.
 
+Automatic mode includes a verdict panel beneath the live metrics. It shows a
+carryover-risk warning for a recipe change, the latest completed vial's verdict
+and explanation, and a newest-first table of completed vials. In an unknown-
+recipe run, the table marks vials `NO RECIPE`; a vial without an observed fill
+start is `NO DATA` and has no anomaly score.
+
 If the browser camera view differs from Dataset 2's fixed view, calibrate that
 camera with `vialsense.live_cli calibrate`, inspect its preview, then upload
 the resulting calibration JSON in the dashboard. Do not trust detection until
@@ -50,16 +56,16 @@ on a separate line before running Python. Live replay outputs include
 
 ## Video 5 validation
 
-The local Video 5 replay found and assigned all 30 vials in queue order. The
-for the 29 vials with an observed fill start, estimated fill-window starts
+The current Video 5 replay found and assigned all 30 vials in queue order.
+For the 29 vials with an observed fill start, estimated fill-window starts
 differed from corrected CSV labels by a mean absolute 0.84 s (maximum 4.06 s);
-estimated ends differed by 0.72 s on average (maximum 3.03 s). The latest
-replay produced 20 `PASS`, 9 `FLAG`, and 1
-`NO DATA` verdict. Vial 1 is unscored because it arrived with liquid already
-visible. This is one fewer `FLAG` than the previously saved replay: the
-updated logic no longer creates an end-anchored score when fill start was not
-observed. These remain provisional model outputs, not accuracy or
-contamination evidence.
+estimated ends differed by 0.72 s on average (maximum 3.03 s). The replay
+produced 20 `PASS`, 9 `FLAG`, and 1 `NO DATA` verdict. Vial 1 is unscored
+because it arrived with liquid already visible and has no preceding recipe.
+The replay files in [`results/live/video5_replay/`](results/live/video5_replay/)
+were generated with the current fill-start guard; they replace the older ZIP
+output where Vial 1 was scored despite its start being unobserved. These remain
+provisional model outputs, not accuracy or contamination evidence.
 
 Video 5 starts with liquid already visible in Vial 1. The tracker labels that
 start as unobserved and withholds progress and anomaly scoring instead of
